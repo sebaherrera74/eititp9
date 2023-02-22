@@ -59,6 +59,11 @@
 /* === Definicion y Macros ================================================= */
 
 /* === Declaraciones de tipos de datos internos ============================ */
+typedef struct parametros_s {
+	digital_output_t led;
+	uint16_t periodo;
+} * parametros_t;
+
 
 /* === Declaraciones de funciones internas ================================= */
 
@@ -71,10 +76,16 @@ static board_t board;
 /* === Definiciones de funciones internas ================================== */
 
 void Blinking(void * parameters) {
-    while (true) {
-        DigitalOutputToggle(board->led_azul);
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
+	parametros_t parametros =(parametros_t) parameters;
+
+	while (true) {
+
+		DigitalOutputActivate(parametros->led);
+		vTaskDelay(pdMS_TO_TICKS(parametros->periodo));
+		DigitalOutputDeactivate(parametros->led);
+		vTaskDelay(pdMS_TO_TICKS(parametros->periodo));
+
+	}
 }
 
 /* === Definiciones de funciones externas ================================== */
@@ -87,21 +98,28 @@ void Blinking(void * parameters) {
  **          El valor de retorno 0 es para evitar un error en el compilador.
  */
 int main(void) {
-    /* Inicializaciones y configuraciones de dispositivos */
-    board = BoardCreate();
+	/* Inicializaciones y configuraciones de dispositivos */
+	board = BoardCreate();
+	static struct parametros_s parametros[2];
 
-    /* Creación de las tareas */
-    xTaskCreate(Blinking, "Baliza", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+	parametros[0].led=board->led_azul;
+	parametros[0].periodo=500;
+	parametros[1].led=board->led_rojo;
+	parametros[1].periodo=500;
 
-    /* Arranque del sistema operativo */
-    vTaskStartScheduler();
+	/* Creación de las tareas */
+	xTaskCreate(Blinking, "Rojo", configMINIMAL_STACK_SIZE, &parametros[0], tskIDLE_PRIORITY + 1, NULL);
+	xTaskCreate(Blinking, "Verde",configMINIMAL_STACK_SIZE, &parametros[1], tskIDLE_PRIORITY + 1, NULL);
 
-    /* vTaskStartScheduler solo retorna si se detiene el sistema operativo */
-    while (1) {
-    };
+	/* Arranque del sistema operativo */
+	vTaskStartScheduler();
 
-    /* El valor de retorno es solo para evitar errores en el compilador*/
-    return 0;
+	/* vTaskStartScheduler solo retorna si se detiene el sistema operativo */
+	while (1) {
+	};
+
+	/* El valor de retorno es solo para evitar errores en el compilador*/
+	return 0;
 }
 /* === Ciere de documentacion ============================================== */
 /** @} Final de la definición del modulo para doxygen */
