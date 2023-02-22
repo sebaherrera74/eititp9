@@ -55,6 +55,7 @@
 #include "bsp.h"
 #include "task.h"
 #include <stdbool.h>
+#include "semphr.h"
 
 /* === Definicion y Macros ================================================= */
 
@@ -70,6 +71,8 @@ typedef struct parametros_s {
 /* === Definiciones de variables internas ================================== */
 
 static board_t board;
+static SemaphoreHandle_t mutex;
+
 
 /* === Definiciones de variables externas ================================== */
 
@@ -79,10 +82,13 @@ void Blinking(void * parameters) {
 	parametros_t parametros =(parametros_t) parameters;
 
 	while (true) {
+        xSemaphoreTake(mutex,portMAX_DELAY);
 
 		DigitalOutputActivate(parametros->led);
 		vTaskDelay(pdMS_TO_TICKS(parametros->periodo));
 		DigitalOutputDeactivate(parametros->led);
+
+		xSemaphoreGive(mutex);
 		vTaskDelay(pdMS_TO_TICKS(parametros->periodo));
 
 	}
@@ -106,6 +112,8 @@ int main(void) {
 	parametros[0].periodo=500;
 	parametros[1].led=board->led_rojo;
 	parametros[1].periodo=500;
+
+	mutex=xSemaphoreCreateMutex();
 
 	/* Creación de las tareas */
 	xTaskCreate(Blinking, "Rojo", configMINIMAL_STACK_SIZE, &parametros[0], tskIDLE_PRIORITY + 1, NULL);
